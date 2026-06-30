@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Günlük Görev Takip</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent:       #007fff;
+    --accent-dark:  #0060cc;
+    --accent-light: #339dff;
+    --green:  #27ae60;
+    --red:    #e74c3c;
+    --orange: #f39c12;
+    --bg:        #f0f4f8;
+    --surface:   #ffffff;
+    --surface2:  #f8fafc;
+    --border:    #e2e8f0;
+    --text:      #1a2332;
+    --text2:     #64748b;
+    --text3:     #94a3b8;
+    --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,127,255,.06);
+    --radius:    14px;
+    --radius-sm: 8px;
+    --sb-w-collapsed: 64px;
+    --sb-w-expanded:  220px;
+  }
+  [data-theme="dark"] {
+    --bg:      #13151f;
+    --surface: #1e2130;
+    --surface2:#252836;
+    --border:  #2e3347;
+    --text:    #e0e6f0;
+    --text2:   #7a8aaa;
+    --text3:   #4a5570;
+    --shadow:  0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,127,255,.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    transition: background .3s, color .3s;
+  }
+
+  /* ── SIDEBAR ────────────────────────────────────────────── */
+  .sidebar {
+    width: var(--sb-w-collapsed);
+    background: linear-gradient(180deg, var(--accent-dark) 0%, var(--accent) 60%, var(--accent-light) 100%);
+    color: #fff;
+    transition: width .25s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    box-shadow: 4px 0 24px rgba(0,127,255,.15);
+  }
+  .sidebar.expanded {
+    width: var(--sb-w-expanded);
+  }
+  .sb-logo {
+    height: 68px;
+    display: flex; align-items: center;
+    justify-content: flex-start;
+    padding: 0;
+    font-size: 22px;
+    font-weight: 700;
+    border-bottom: 1px solid rgba(255,255,255,.15);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .sb-logo .sb-icon {
+    width: var(--sb-w-collapsed);
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 22px;
+  }
+  .sb-logo .logo-text {
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .sidebar.expanded .logo-text { opacity: 1; }
+
+  .sb-nav {
+    flex: 1;
+    padding: 14px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    height: 46px;
+    border-radius: 10px;
+    cursor: pointer;
+    background: rgba(255,255,255,0);
+    color: rgba(255,255,255,.85);
+    transition: background .15s, color .15s;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .sb-item:hover { background: rgba(255,255,255,.15); color: #fff; }
+  .sb-item.active {
+    background: rgba(255,255,255,.95);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .sb-icon {
+    font-size: 18px;
+    width: calc(var(--sb-w-collapsed) - 16px);
+    text-align: center;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-label {
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .sidebar.expanded .sb-label { opacity: 1; }
+
+  .sb-footer {
+    padding: 10px 8px;
+    border-top: 1px solid rgba(255,255,255,.15);
+  }
+
+  /* ── MAIN CONTENT ───────────────────────────────────────── */
+  .content {
+    flex: 1;
+    margin-left: var(--sb-w-collapsed);
+    padding: 28px 32px;
+    min-height: 100vh;
+  }
+
+  /* ── TAB PANEL ──────────────────────────────────────────── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── SECTION HEADER ─────────────────────────────────────── */
+  .section-hdr {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .section-hdr h2 {
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .task-input-wrap {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    min-width: 200px;
+  }
+  .task-input-wrap input {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 14px;
+    font-size: 13px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .task-input-wrap input:focus { border-color: var(--accent); }
+  .task-input-wrap input::placeholder { color: var(--text3); }
+  .add-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .add-btn:hover { background: var(--accent-dark); }
+
+  /* ── GÖREV KARTI ────────────────────────────────────────── */
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    animation: slideIn .25s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .chk-wrap {
+    flex-shrink: 0; width: 22px; height: 22px;
+    position: relative; cursor: pointer;
+  }
+  .chk-wrap input { display: none; }
+  .chk-box {
+    width: 22px; height: 22px;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+    cursor: pointer;
+  }
+  .chk-wrap input:checked + .chk-box {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .chk-wrap input:checked + .chk-box::after {
+    content: '';
+    width: 5px; height: 9px;
+    border: 2px solid #fff;
+    border-top: none; border-left: none;
+    transform: rotate(45deg) translateY(-1px);
+    display: block;
+  }
+  .chk-wrap.readonly { pointer-events: none; }
+  .chk-wrap.readonly .chk-box { background: var(--green); border-color: var(--green); }
+  .chk-wrap.readonly .chk-box::after {
+    content: '';
+    width: 5px; height: 9px;
+    border: 2px solid #fff;
+    border-top: none; border-left: none;
+    transform: rotate(45deg) translateY(-1px);
+    display: block;
+  }
+
+  .task-name {
+    flex: 1; font-size: 13px; font-weight: 600;
+    color: var(--text); transition: all .2s;
+  }
+  .task-name.done {
+    text-decoration: line-through; color: var(--text3);
+  }
+
+  .task-meta {
+    display: flex; gap: 14px; align-items: center;
+    font-size: 11px; color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+  }
+  .meta-item {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .meta-start {
+    font-size: 11px;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(39,174,96,.06);
+    border: 1px solid rgba(39,174,96,.25);
+    color: var(--green);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .meta-start:hover {
+    background: rgba(39,174,96,.12);
+    border-color: var(--green);
+  }
+  .meta-start.no-edit {
+    cursor: default;
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text2);
+  }
+  .meta-start.no-edit:hover {
+    background: transparent;
+    border-color: var(--border);
+  }
+  .meta-due {
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    transition: all .15s;
+  }
+  .meta-due:hover { border-color: var(--accent); color: var(--accent); }
+  .meta-due.set {
+    border-style: solid;
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,127,255,.08);
+  }
+  .meta-due.overdue {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(231,76,60,.08);
+  }
+  .meta-due.fixed {
+    cursor: default;
+    opacity: .85;
+    pointer-events: none;
+  }
+
+  .icon-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 13px;
+    transition: all .2s; flex-shrink: 0;
+  }
+  .icon-btn:hover { background: var(--border); }
+  .icon-btn.del-btn:hover { background: #fff0f0; border-color: #ffc0c0; color: var(--red); }
+  .icon-btn.expand-btn.open { color: var(--accent); }
+
+  /* ── ALT GÖREVLER ───────────────────────────────────────── */
+  .sub-panel {
+    background: var(--surface2);
+    border-top: 1px solid var(--border);
+    padding: 10px 14px 12px 48px;
+    display: none;
+  }
+  .sub-panel.open { display: block; }
+  .sub-add-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .sub-add-row input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+  }
+  .sub-add-row input:focus { border-color: var(--accent); }
+  .sub-add-row button {
+    background: var(--accent);
+    color: #fff; border: none;
+    border-radius: 7px;
+    width: 28px; height: 28px;
+    font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sub-add-row button:hover { background: var(--accent-dark); }
+
+  .sub-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .sub-item:last-child { border-bottom: none; }
+  .sub-chk-wrap { flex-shrink: 0; cursor: pointer; }
+  .sub-chk-wrap input { display: none; }
+  .sub-chk-box {
+    width: 17px; height: 17px;
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sub-chk-wrap input:checked + .sub-chk-box {
+    background: var(--accent); border-color: var(--accent);
+  }
+  .sub-chk-wrap input:checked + .sub-chk-box::after {
+    content: '';
+    width: 4px; height: 7px;
+    border: 2px solid #fff;
+    border-top: none; border-left: none;
+    transform: rotate(45deg) translateY(-1px);
+    display: block;
+  }
+  .sub-name { flex: 1; font-size: 12px; color: var(--text); }
+  .sub-name.done { text-decoration: line-through; color: var(--text3); }
+  .sub-meta-row {
+    display: flex; gap: 8px; align-items: center;
+    font-family: 'DM Mono', monospace; font-size: 10px;
+  }
+  .sub-meta-row .meta-item { color: var(--text3); }
+  .sub-meta-row .meta-due {
+    font-size: 10px; padding: 2px 6px;
+  }
+  .sub-del {
+    background: none; border: none; color: var(--text3); cursor: pointer;
+    font-size: 13px; padding: 2px 4px; border-radius: 4px;
+  }
+  .sub-del:hover { background: #fff0f0; color: var(--red); }
+
+  /* ── DATE PICKER POPUP ──────────────────────────────────── */
+  .dp-popup {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.15);
+    z-index: 1000;
+    display: none;
+    min-width: 280px;
+  }
+  .dp-popup.show { display: block; }
+  .dp-hdr {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .dp-hdr h4 { font-size: 13px; font-weight: 700; color: var(--text); }
+  .dp-nav-btns { display: flex; gap: 4px; }
+  .dp-nav-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 24px; height: 24px;
+    cursor: pointer; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text);
+  }
+  .dp-nav-btn:hover { background: var(--accent); color: #fff; }
+  .dp-days-hdr, .dp-days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .dp-day-name {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text3);
+    padding: 4px 0;
+    font-weight: 600;
+  }
+  .dp-day {
+    text-align: center;
+    padding: 6px 0;
+    font-size: 12px;
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .12s;
+  }
+  .dp-day:hover { background: var(--accent); color: #fff; }
+  .dp-day.other { color: var(--text3); }
+  .dp-day.today { border: 1.5px solid var(--accent); font-weight: 700; }
+  .dp-day.selected { background: var(--accent); color: #fff; font-weight: 700; }
+  /* Saat seçici */
+  .dp-time-row {
+    margin-top: 10px;
+    padding: 10px 0 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .dp-time-lbl {
+    font-size: 11px;
+    color: var(--text2);
+    font-weight: 600;
+  }
+  .dp-time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .dp-time-input {
+    width: 52px;
+    padding: 6px 8px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .dp-time-input:focus { border-color: var(--accent); }
+  .dp-time-input::-webkit-outer-spin-button,
+  .dp-time-input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .dp-time-input { -moz-appearance: textfield; }
+  .dp-time-sep {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text2);
+  }
+  .dp-time-presets {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .dp-preset {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px 8px;
+    font-size: 10px;
+    cursor: pointer;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    transition: all .15s;
+  }
+  .dp-preset:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .dp-actions {
+    display: flex; gap: 6px; margin-top: 10px;
+    border-top: 1px solid var(--border); padding-top: 10px;
+  }
+  .dp-action-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+  }
+  .dp-action-btn:hover { background: var(--border); }
+  .dp-action-btn.clear:hover { background: var(--red); color: #fff; border-color: var(--red); }
+  .dp-action-btn.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .dp-action-btn.primary:hover { background: var(--accent-dark); }
+
+  /* ── STATS ──────────────────────────────────────────────── */
+  .stats-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 26px;
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+  .chart-wrap {
+    position: relative;
+    width: 100px; height: 100px;
+    flex-shrink: 0;
+  }
+  .chart-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .chart-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .chart-pct { font-size: 18px; font-weight: 700; color: var(--text); }
+  .chart-label { font-size: 10px; color: var(--text3); margin-top: 1px; }
+  .stat-items { display: flex; gap: 26px; flex-wrap: wrap; }
+  .stat-item { display: flex; flex-direction: column; gap: 2px; }
+  .stat-dot-row { display: flex; align-items: center; gap: 6px; }
+  .stat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .stat-val { font-size: 22px; font-weight: 700; color: var(--text); }
+  .stat-key { font-size: 11px; color: var(--text2); }
+
+  /* ── TAKVİM ─────────────────────────────────────────────── */
+  .cal-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .cal-header-row h2 { font-size: 22px; font-weight: 700; }
+  .cal-nav-btns { display: flex; gap: 8px; align-items: center; }
+  .cal-nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 32px; height: 32px;
+    cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s; color: var(--text);
+  }
+  .cal-nav-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .cal-title {
+    min-width: 160px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .cal-grid {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .cal-days-hdr {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  }
+  .cal-day-name {
+    text-align: center;
+    padding: 10px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,.85);
+  }
+  .cal-day-name.weekend { color: rgba(255,255,255,.6); }
+  .cal-cells {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .cal-cell {
+    min-height: 86px;
+    border: .5px solid var(--border);
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: background .15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .cal-cell:hover { background: var(--surface2); }
+  .cal-cell.other-month { opacity: .35; }
+  .cal-cell.today .cal-cell-num {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-cell-num {
+    font-size: 13px; font-weight: 600;
+    color: var(--text);
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-cell.weekend .cal-cell-num { color: var(--red); }
+  .cal-cell.today.weekend .cal-cell-num { color: #fff; }
+
+  .cal-tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+  }
+  .cal-mini {
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: rgba(0,127,255,.12);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .cal-mini.bitis { background: rgba(231,76,60,.12); color: var(--red); }
+  .cal-mini.done  { background: rgba(39,174,96,.12);  color: var(--green); text-decoration: line-through; }
+  .cal-mini.plan {
+    background: rgba(139,92,246,.12);
+    color: #8b5cf6;
+    border-left: 2px solid #8b5cf6;
+    padding-left: 4px;
+  }
+  .cal-mini.plan.bitis {
+    background: rgba(139,92,246,.12);
+    color: #8b5cf6;
+    border-left: 2px solid #e74c3c;
+  }
+  .cal-more {
+    font-size: 9px;
+    color: var(--text3);
+    padding-left: 4px;
+    font-weight: 600;
+  }
+
+  .cal-tooltip {
+    position: fixed;
+    background: var(--surface);
+    border: 1.5px solid var(--accent);
+    border-radius: 12px;
+    min-width: 260px;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    z-index: 999;
+    pointer-events: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s, visibility .15s;
+    overflow: hidden;
+  }
+  .cal-tooltip.show { opacity: 1; visibility: visible; }
+  .cal-tooltip-hdr {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cal-tooltip-close {
+    background: rgba(255,255,255,.2);
+    border: none;
+    color: white;
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .cal-tooltip-close:hover { background: rgba(255,255,255,.35); }
+
+  .cal-tooltip-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .cal-tooltip-tab {
+    flex: 1;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all .15s;
+    border-bottom: 2px solid transparent;
+  }
+  .cal-tooltip-tab:hover { color: var(--text); }
+  .cal-tooltip-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: var(--surface);
+  }
+  .cal-tooltip-tab .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    border-radius: 8px;
+    padding: 1px 5px;
+    font-size: 9px;
+    margin-left: 4px;
+  }
+  .cal-tooltip-tab.active .badge { background: var(--accent); }
+
+  .cal-tooltip-body {
+    padding: 10px 14px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .cal-tooltip-item {
+    font-size: 11px;
+    color: var(--text);
+    margin: 4px 0;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cal-tooltip-tag {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .cal-tooltip-tag.bas { background: rgba(0,127,255,.18); color: var(--accent); }
+  .cal-tooltip-tag.bit { background: rgba(231,76,60,.18); color: var(--red); }
+
+  .cal-tooltip-empty {
+    text-align: center;
+    color: var(--text3);
+    font-size: 11px;
+    font-style: italic;
+    padding: 12px 0;
+  }
+
+  /* Not satırı */
+  .note-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    background: rgba(243,156,18,.08);
+    border-left: 3px solid var(--orange);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--text);
+  }
+  .note-item-text {
+    flex: 1;
+    word-break: break-word;
+    line-height: 1.4;
+  }
+  .note-item-time {
+    font-size: 9px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+  .note-del-btn {
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+  .note-del-btn:hover { background: rgba(231,76,60,.15); color: var(--red); }
+
+  .note-add-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+  }
+  .note-add-row textarea {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    resize: vertical;
+    min-height: 36px;
+    max-height: 100px;
+    outline: none;
+  }
+  .note-add-row textarea:focus { border-color: var(--orange); }
+  .note-add-btn {
+    background: var(--orange);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    align-self: stretch;
+  }
+  .note-add-btn:hover { background: #d6890d; }
+
+  /* Takvim hücresinde not göstergesi */
+  .cal-note-badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: var(--orange);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 8px;
+    line-height: 1.3;
+  }
+
+  .cal-legend {
+    display: flex; gap: 16px;
+    margin-top: 12px;
+    font-size: 11px; color: var(--text2);
+    flex-wrap: wrap;
+  }
+  .cal-legend-item { display: flex; align-items: center; gap: 5px; }
+  .cal-legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+  /* Empty / Spinner */
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text3);
+  }
+  .empty .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+  .spinner {
+    text-align: center;
+    padding: 32px;
+    color: var(--text3);
+    font-size: 24px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Sidebar footer items */
+  .sb-user-info {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.85);
+    overflow: hidden;
+    font-size: 12px;
+  }
+  .sb-user-info .sb-icon {
+    width: calc(var(--sb-w-collapsed) - 16px - 2px);
+    text-align: center;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .sb-user-info .sb-label {
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity .2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 8px;
+  }
+  .sidebar.expanded .sb-user-info .sb-label { opacity: 1; }
+
+  .theme-btn, .logout-btn {
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.25);
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background .2s;
+    display: flex; align-items: center;
+    height: 40px;
+    padding: 0;
+    font-size: 15px;
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    margin-bottom: 6px;
+    text-decoration: none;
+  }
+  .theme-btn:hover, .logout-btn:hover, .admin-link-btn:hover { background: rgba(255,255,255,.28); }
+  .logout-btn:hover {
+    background: rgba(231,76,60,.4);
+    border-color: rgba(231,76,60,.5);
+  }
+  .admin-link-btn {
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.25);
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background .2s;
+    display: flex; align-items: center;
+    height: 40px;
+    padding: 0;
+    font-size: 15px;
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    margin-bottom: 6px;
+    text-decoration: none;
+  }
+  .admin-link-btn:hover {
+    background: rgba(243,156,18,.4) !important;
+    border-color: rgba(243,156,18,.5);
+  }
+  .admin-link-btn .sb-icon {
+    width: calc(var(--sb-w-collapsed) - 16px - 2px);
+    text-align: center;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .admin-link-btn .sb-label {
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .theme-btn .sb-icon, .logout-btn .sb-icon {
+    width: calc(var(--sb-w-collapsed) - 16px - 2px);
+    text-align: center;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .theme-btn .sb-label, .logout-btn .sb-label {
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  /* ── PLANLAMALAR ────────────────────────────────────────── */
+  .plans-wrap {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .plans-sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 8px;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+  }
+  .plans-cat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .plans-add-cat-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s;
+  }
+  .plans-add-cat-btn:hover { background: var(--accent-dark); }
+  .plans-add-cat-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+    padding: 4px;
+    background: var(--surface2);
+    border-radius: 8px;
+    animation: slideIn .2s ease;
+  }
+  .plans-add-cat-row input {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--accent);
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    min-width: 0;
+  }
+  .plans-cat-save, .plans-cat-cancel {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .plans-cat-rename-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--accent);
+    border-radius: 5px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    min-width: 0;
+    margin-right: 4px;
+  }
+  .plans-cat-cancel { background: var(--text3); }
+  .plans-cat-save:hover { background: var(--accent-dark); }
+  .plans-cat-cancel:hover { background: var(--text2); }
+  .plans-cat-item {
+    display: flex;
+    align-items: center;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    transition: background .15s;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+  .plans-cat-item:hover { background: var(--surface2); }
+  .plans-cat-item.active {
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+  }
+  .plans-cat-item.active .plans-cat-count {
+    background: rgba(255,255,255,.25);
+    color: white;
+  }
+  .plans-cat-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .plans-cat-count {
+    background: var(--surface2);
+    color: var(--text2);
+    border-radius: 8px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .plans-cat-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .plans-cat-item:hover .plans-cat-actions { opacity: 1; }
+  .plans-cat-item.active .plans-cat-actions { opacity: 1; }
+  .plans-cat-btn {
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+  .plans-cat-btn:hover { background: rgba(255,255,255,.2); }
+  .plans-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .plans-empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text3);
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+  }
+
+  /* Plan kartı: tasarımı task-card ile aynı ama mor aksan */
+  .plan-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid #8b5cf6;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 8px;
+    animation: slideIn .25s ease;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .content { padding: 20px 16px; }
+    .section-hdr { flex-direction: column; align-items: stretch; }
+    .stats-bar { flex-direction: column; gap: 16px; }
+    .cal-mini { font-size: 8px; }
+    .cal-cell { min-height: 64px; }
+    .task-meta { font-size: 10px; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ──────────────────────────────────────────── -->
+<nav class="sidebar" id="sidebar">
+  <div class="sb-logo">
+    <span class="sb-icon">📋</span>
+    <span class="logo-text">Görev Takip</span>
+  </div>
+
+  <div class="sb-nav">
+    <div class="sb-item active" data-tab="all">
+      <span class="sb-icon">📝</span>
+      <span class="sb-label">Tüm Görevler</span>
+    </div>
+    <div class="sb-item" data-tab="today">
+      <span class="sb-icon">☀️</span>
+      <span class="sb-label">Günlük Görevler</span>
+    </div>
+    <div class="sb-item" data-tab="done">
+      <span class="sb-icon">✅</span>
+      <span class="sb-label">Tamamlananlar</span>
+    </div>
+    <div class="sb-item" data-tab="plans">
+      <span class="sb-icon">📂</span>
+      <span class="sb-label">Planlamalar</span>
+    </div>
+    <div class="sb-item" data-tab="calendar">
+      <span class="sb-icon">📅</span>
+      <span class="sb-label">Takvim</span>
+    </div>
+  </div>
+
+  <div class="sb-footer">
+    <div class="sb-user-info" title="{{ user_email }}">
+      <span class="sb-icon">👤</span>
+      <span class="sb-label">{{ user_email }}</span>
+    </div>
+    <button class="theme-btn" id="themeBtn" title="Tema değiştir">
+      <span class="sb-icon">🌙</span>
+      <span class="sb-label">Koyu Tema</span>
+    </button>
+    {% if is_admin %}
+    <a href="/admin" class="admin-link-btn" title="Admin Paneli">
+      <span class="sb-icon">⚙️</span>
+      <span class="sb-label">Admin Paneli</span>
+    </a>
+    {% endif %}
+    <a href="/logout" class="logout-btn" title="Çıkış yap">
+      <span class="sb-icon">🚪</span>
+      <span class="sb-label">Çıkış Yap</span>
+    </a>
+  </div>
+</nav>
+
+<!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+<div class="content">
+
+  <!-- TÜM GÖREVLER -->
+  <div class="tab-panel active" id="tab-all">
+    <div class="section-hdr">
+      <h2>📝 Görevler</h2>
+      <div class="task-input-wrap">
+        <input type="text" id="newTaskInput" placeholder="Yeni görev ekle..." />
+        <button class="add-btn" id="addTaskBtn">＋ Görev Ekle</button>
+      </div>
+    </div>
+    <div class="task-list" id="taskList"><div class="spinner">⏳</div></div>
+    <div class="stats-bar" id="statsBar">
+      <div class="chart-wrap">
+        <svg viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" stroke-width="3.5"/>
+          <circle id="chartCircle" cx="18" cy="18" r="15.9" fill="none"
+                  stroke="var(--green)" stroke-width="3.5"
+                  stroke-dasharray="0 100" stroke-linecap="round"
+                  style="transition: stroke-dasharray .6s ease"/>
+        </svg>
+        <div class="chart-center">
+          <span class="chart-pct" id="chartPct">0%</span>
+          <span class="chart-label">tamam</span>
+        </div>
+      </div>
+      <div class="stat-items">
+        <div class="stat-item">
+          <div class="stat-dot-row"><span class="stat-dot" style="background:var(--text2)"></span><span class="stat-key">Toplam</span></div>
+          <span class="stat-val" id="statTotal">0</span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot-row"><span class="stat-dot" style="background:var(--green)"></span><span class="stat-key">Tamamlanan</span></div>
+          <span class="stat-val" id="statDone">0</span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot-row"><span class="stat-dot" style="background:var(--accent)"></span><span class="stat-key">Aktif</span></div>
+          <span class="stat-val" id="statActive">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAMAMLANANLAR -->
+  <div class="tab-panel" id="tab-done">
+    <div class="section-hdr"><h2>✅ Tamamlananlar</h2></div>
+    <div class="task-list" id="doneList"><div class="spinner">⏳</div></div>
+  </div>
+
+  <!-- GÜNLÜK GÖREVLER -->
+  <div class="tab-panel" id="tab-today">
+    <div class="section-hdr">
+      <h2>☀️ Bugünün Görevleri <span id="todayDate" style="font-weight:400;color:var(--text2);font-size:14px;margin-left:8px"></span></h2>
+      <div class="task-input-wrap">
+        <input type="text" id="newTodayInput" placeholder="Bugüne yeni görev (otomatik gün sonu)..." />
+        <button class="add-btn" id="addTodayBtn">＋ Ekle</button>
+      </div>
+    </div>
+    <div class="task-list" id="todayList"><div class="spinner">⏳</div></div>
+
+    <div class="section-hdr" style="margin-top:32px">
+      <h2 style="color:var(--red)">⚠ Tamamlanmayan Görevler</h2>
+    </div>
+    <div class="task-list" id="overdueList"></div>
+
+    <div class="stats-bar" id="todayStatsBar">
+      <div class="chart-wrap">
+        <svg viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" stroke-width="3.5"/>
+          <circle id="todayChartCircle" cx="18" cy="18" r="15.9" fill="none"
+                  stroke="var(--green)" stroke-width="3.5"
+                  stroke-dasharray="0 100" stroke-linecap="round"
+                  style="transition: stroke-dasharray .6s ease"/>
+        </svg>
+        <div class="chart-center">
+          <span class="chart-pct" id="todayChartPct">0%</span>
+          <span class="chart-label">tamam</span>
+        </div>
+      </div>
+      <div class="stat-items">
+        <div class="stat-item">
+          <div class="stat-dot-row"><span class="stat-dot" style="background:var(--text2)"></span><span class="stat-key">Bugün Toplam</span></div>
+          <span class="stat-val" id="todayStatTotal">0</span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot-row"><span class="stat-dot" style="background:var(--green)"></span><span class="stat-key">Tamamlanan</span></div>
+          <span class="stat-val" id="todayStatDone">0</span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot-row"><span class="stat-dot" style="background:var(--accent)"></span><span class="stat-key">Aktif</span></div>
+          <span class="stat-val" id="todayStatActive">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLANLAMALAR -->
+  <div class="tab-panel" id="tab-plans">
+    <div class="section-hdr">
+      <h2>📂 Planlamalar</h2>
+    </div>
+    <div class="plans-wrap">
+      <aside class="plans-sidebar">
+        <div class="plans-cat-header">
+          <span>Kategoriler</span>
+          <button class="plans-add-cat-btn" id="showAddCatBtn" title="Yeni kategori ekle">＋</button>
+        </div>
+        <div class="plans-add-cat-row" id="addCatRow" style="display:none;">
+          <input type="text" id="newCatInput" placeholder="Kategori adı..." />
+          <button class="plans-cat-save" id="addCatBtn">✓</button>
+          <button class="plans-cat-cancel" id="cancelAddCatBtn">✕</button>
+        </div>
+        <div class="plans-cat-list" id="plansCatList"><div class="spinner">⏳</div></div>
+      </aside>
+      <section class="plans-main">
+        <div id="plansContent">
+          <div class="empty"><div class="empty-icon">📂</div><p>Sol taraftan bir kategori seçin veya + butonuyla yeni bir kategori oluşturun.</p></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- TAKVİM -->
+  <div class="tab-panel" id="tab-calendar">
+    <div class="cal-header-row">
+      <h2>📅 Görev Takvimi</h2>
+      <div class="cal-nav-btns">
+        <button class="cal-nav-btn" id="calPrev">‹</button>
+        <span class="cal-title" id="calTitle"></span>
+        <button class="cal-nav-btn" id="calNext">›</button>
+      </div>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-days-hdr">
+        <div class="cal-day-name">Pzt</div>
+        <div class="cal-day-name">Sal</div>
+        <div class="cal-day-name">Çar</div>
+        <div class="cal-day-name">Per</div>
+        <div class="cal-day-name">Cum</div>
+        <div class="cal-day-name weekend">Cmt</div>
+        <div class="cal-day-name weekend">Paz</div>
+      </div>
+      <div class="cal-cells" id="calCells"></div>
+    </div>
+    <div class="cal-legend">
+      <div class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--accent)"></span> Görev Başlangıç</div>
+      <div class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--red)"></span> Bitiş</div>
+      <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#8b5cf6"></span> Plan</div>
+      <div class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--green)"></span> Tamamlandı</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Date picker popup -->
+<div class="dp-popup" id="dpPopup">
+  <div class="dp-hdr">
+    <h4 id="dpTitle"></h4>
+    <div class="dp-nav-btns">
+      <button class="dp-nav-btn" id="dpPrev">‹</button>
+      <button class="dp-nav-btn" id="dpNext">›</button>
+    </div>
+  </div>
+  <div class="dp-days-hdr">
+    <div class="dp-day-name">Pzt</div>
+    <div class="dp-day-name">Sal</div>
+    <div class="dp-day-name">Çar</div>
+    <div class="dp-day-name">Per</div>
+    <div class="dp-day-name">Cum</div>
+    <div class="dp-day-name">Cmt</div>
+    <div class="dp-day-name">Paz</div>
+  </div>
+  <div class="dp-days-grid" id="dpGrid"></div>
+
+  <!-- Saat seçici -->
+  <div class="dp-time-row">
+    <label class="dp-time-lbl">🕐 Saat:</label>
+    <div class="dp-time-inputs">
+      <input type="number" id="dpHour" min="0" max="23" value="23" class="dp-time-input">
+      <span class="dp-time-sep">:</span>
+      <input type="number" id="dpMin" min="0" max="59" value="59" class="dp-time-input">
+    </div>
+    <div class="dp-time-presets">
+      <button class="dp-preset" data-h="9"  data-m="0">09:00</button>
+      <button class="dp-preset" data-h="12" data-m="0">12:00</button>
+      <button class="dp-preset" data-h="18" data-m="0">18:00</button>
+      <button class="dp-preset" data-h="23" data-m="59">Gün sonu</button>
+    </div>
+  </div>
+
+  <div class="dp-actions">
+    <button class="dp-action-btn clear" id="dpClear">Kaldır</button>
+    <button class="dp-action-btn" id="dpToday">Bugün</button>
+    <button class="dp-action-btn primary" id="dpSave">Kaydet</button>
+  </div>
+</div>
+
+<!-- Takvim tooltip (sekmeli, sticky) -->
+<div class="cal-tooltip" id="calTooltip">
+  <div class="cal-tooltip-hdr">
+    <span id="ttTitle">📅</span>
+    <button class="cal-tooltip-close" id="ttClose">✕</button>
+  </div>
+  <div class="cal-tooltip-tabs">
+    <button class="cal-tooltip-tab active" data-tt-tab="tasks">Görevler <span class="badge" id="ttBadgeTasks">0</span></button>
+    <button class="cal-tooltip-tab" data-tt-tab="notes">Notlar <span class="badge" id="ttBadgeNotes" style="background:var(--orange)">0</span></button>
+  </div>
+  <div class="cal-tooltip-body" id="ttBody"></div>
+</div>
+
+<script>
+// ── SIDEBAR HOVER GECİKMESİ ─────────────────────────────────
+const sidebar = document.getElementById('sidebar');
+let sbTimer = null;
+sidebar.addEventListener('mouseenter', () => {
+  clearTimeout(sbTimer);
+  sbTimer = setTimeout(() => sidebar.classList.add('expanded'), 500);
+});
+sidebar.addEventListener('mouseleave', () => {
+  clearTimeout(sbTimer);
+  sidebar.classList.remove('expanded');
+});
+
+// ── TEMA ────────────────────────────────────────────────────
+const themeBtn = document.getElementById('themeBtn');
+let dark = localStorage.getItem('theme') === 'dark';
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  themeBtn.querySelector('.sb-icon').textContent = dark ? '☀️' : '🌙';
+  themeBtn.querySelector('.sb-label').textContent = dark ? 'Açık Tema' : 'Koyu Tema';
+}
+applyTheme();
+themeBtn.addEventListener('click', () => {
+  dark = !dark;
+  localStorage.setItem('theme', dark ? 'dark' : 'light');
+  applyTheme();
+});
+
+// ── SEKME ────────────────────────────────────────────────────
+document.querySelectorAll('.sb-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'today')    loadToday();
+    if (btn.dataset.tab === 'done')     loadDone();
+    if (btn.dataset.tab === 'plans')    loadPlans();
+    if (btn.dataset.tab === 'calendar') renderCalendar();
+  });
+});
+
+// ── YARDIMCI ────────────────────────────────────────────────
+function fmtDateTime(dt) {
+  if (!dt) return '';
+  const d = new Date(dt.replace(' ', 'T'));
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function fmtDateShort(dt) {
+  if (!dt) return '';
+  const d = new Date(dt.replace(' ', 'T'));
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+}
+function isOverdue(due_at, completed) {
+  if (!due_at || completed) return false;
+  return new Date(due_at.replace(' ','T')) < new Date();
+}
+async function api(url, method='GET', body=null) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  return r.json();
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── GÖREV KARTI ─────────────────────────────────────────────
+function taskCardHTML(t, readonly=false, fixedDue=false) {
+  const meta_start = fmtDateTime(t.completed ? t.completed_at : t.created_at);
+
+  const dueClass = t.due_at ? (isOverdue(t.due_at, t.completed) ? 'meta-due set overdue' : 'meta-due set') : 'meta-due';
+  const dueLabel = t.due_at ? `🎯 ${fmtDateTime(t.due_at)}` : '🎯 Bitiş tarihi';
+  const dueAttr  = (readonly || fixedDue) ? '' : `onclick="openDP(this,'task',${t.id},'${t.due_at||''}')"`;
+  const dueExtraCls = fixedDue ? ' fixed' : '';
+
+  const subsHTML = t.subtasks.map(s => {
+    const subDueClass = s.due_at ? (isOverdue(s.due_at, s.sub_done) ? 'meta-due set overdue' : 'meta-due set') : 'meta-due';
+    const subDueLabel = s.due_at ? `🎯 ${fmtDateTime(s.due_at)}` : '🎯 Bitiş';
+    return `
+    <div class="sub-item" id="sub-${s.id}">
+      <label class="sub-chk-wrap">
+        <input type="checkbox" ${s.sub_done ? 'checked' : ''} onchange="toggleSub(${s.id},${t.id},this)">
+        <span class="sub-chk-box"></span>
+      </label>
+      <span class="sub-name ${s.sub_done ? 'done' : ''}" id="subname-${s.id}">${escHtml(s.sub_text)}</span>
+      <div class="sub-meta-row">
+        <span class="meta-item">📅 ${fmtDateShort(s.created_at)}</span>
+        <span class="${subDueClass}" id="subdue-${s.id}" onclick="openDP(this,'sub',${s.id},'${s.due_at||''}')">${subDueLabel}</span>
+      </div>
+      <button class="sub-del" onclick="delSub(${s.id},${t.id})" title="Sil">🗑</button>
+    </div>`;
+  }).join('');
+
+  const expandBtn = readonly ? '' : `<button class="icon-btn expand-btn" onclick="toggleExpand(this,${t.id})" title="Alt görevler">▸</button>`;
+  const delBtn    = readonly ? '' : `<button class="icon-btn del-btn" onclick="delTask(${t.id})" title="Sil">🗑</button>`;
+  const subPanel  = readonly ? '' : `
+    <div class="sub-panel" id="subpanel-${t.id}">
+      <div class="sub-add-row">
+        <input type="text" id="subinput-${t.id}" placeholder="Alt görev ekle..." onkeydown="if(event.key==='Enter')addSub(${t.id})">
+        <button onclick="addSub(${t.id})">+</button>
+      </div>
+      <div class="sub-list" id="sublist-${t.id}">${subsHTML}</div>
+    </div>`;
+
+  return `
+    <div class="task-card" id="task-${t.id}">
+      <div class="task-row">
+        <label class="chk-wrap ${readonly?'readonly':''}">
+          <input type="checkbox" ${t.completed?'checked':''} ${readonly?'disabled':`onchange="toggleTask(${t.id},this)"`}>
+          <span class="chk-box"></span>
+        </label>
+        <span class="task-name ${t.completed?'done':''}" id="taskname-${t.id}">${escHtml(t.task_text)}</span>
+        <div class="task-meta">
+          <span class="meta-start ${(readonly||fixedDue||t.completed)?'no-edit':''}" id="taskmeta-${t.id}" ${(readonly||fixedDue||t.completed) ? '' : `onclick="openDP(this,'taskstart',${t.id},'${t.created_at||''}')"`}>📅 ${meta_start}</span>
+          <span class="${dueClass}${dueExtraCls}" id="taskdue-${t.id}" ${dueAttr}>${dueLabel}</span>
+        </div>
+        ${expandBtn}${delBtn}
+      </div>
+      ${subPanel}
+    </div>`;
+}
+
+// ── YÜKLEMELER ──────────────────────────────────────────────
+async function loadAll() {
+  const tasks = await api('/api/tasks');
+  const list = document.getElementById('taskList');
+  if (!tasks.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📝</div><p>Henüz görev yok. Yukarıdan ekleyebilirsin!</p></div>';
+  } else {
+    list.innerHTML = tasks.map(t => taskCardHTML(t, false)).join('');
+  }
+  loadStats();
+}
+async function loadDone() {
+  const tasks = await api('/api/tasks');
+  const done = tasks.filter(t => t.completed);
+  const list = document.getElementById('doneList');
+  if (!done.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><p>Henüz tamamlanan görev yok.</p></div>';
+  } else {
+    list.innerHTML = done.map(t => taskCardHTML(t, true)).join('');
+  }
+}
+async function loadStats() {
+  const s = await api('/api/stats');
+  document.getElementById('statTotal').textContent  = s.toplam;
+  document.getElementById('statDone').textContent   = s.tamamlanan;
+  document.getElementById('statActive').textContent = s.aktif;
+  const pct = s.toplam > 0 ? Math.round(s.tamamlanan / s.toplam * 100) : 0;
+  document.getElementById('chartPct').textContent = pct + '%';
+  const circ = 2 * Math.PI * 15.9;
+  const fill = (pct / 100) * circ;
+  document.getElementById('chartCircle').setAttribute('stroke-dasharray', `${fill.toFixed(1)} ${(circ-fill).toFixed(1)}`);
+}
+
+// ── GÖREV İŞLEMLERİ ─────────────────────────────────────────
+document.getElementById('addTaskBtn').addEventListener('click', addTask);
+document.getElementById('newTaskInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+async function addTask() {
+  const inp = document.getElementById('newTaskInput');
+  const text = inp.value.trim();
+  if (!text) return;
+  const t = await api('/api/tasks', 'POST', {task_text: text});
+  inp.value = '';
+  const list = document.getElementById('taskList');
+  if (list.querySelector('.empty')) list.innerHTML = '';
+  list.insertAdjacentHTML('afterbegin', taskCardHTML(t, false));
+  loadStats();
+}
+async function delTask(id) {
+  await api(`/api/tasks/${id}`, 'DELETE');
+  document.getElementById(`task-${id}`)?.remove();
+  loadStats();
+}
+async function toggleTask(id, chk) {
+  const res = await api(`/api/tasks/${id}/toggle`, 'POST');
+  const nameEl = document.getElementById(`taskname-${id}`);
+  const metaEl = document.getElementById(`taskmeta-${id}`);
+  if (res.completed) {
+    nameEl.classList.add('done');
+    metaEl.textContent = '📅 ' + fmtDateTime(res.completed_at);
+  } else {
+    nameEl.classList.remove('done');
+  }
+  loadStats();
+}
+
+// ── ALT GÖREV ───────────────────────────────────────────────
+function toggleExpand(btn, taskId) {
+  const panel = document.getElementById(`subpanel-${taskId}`);
+  const open = panel.classList.toggle('open');
+  btn.textContent = open ? '▾' : '▸';
+  btn.classList.toggle('open', open);
+}
+async function addSub(taskId) {
+  const inp = document.getElementById(`subinput-${taskId}`);
+  const text = inp.value.trim();
+  if (!text) return;
+  const s = await api(`/api/tasks/${taskId}/subtasks`, 'POST', {sub_text: text});
+  inp.value = '';
+  const list = document.getElementById(`sublist-${taskId}`);
+  list.insertAdjacentHTML('beforeend', `
+    <div class="sub-item" id="sub-${s.id}">
+      <label class="sub-chk-wrap">
+        <input type="checkbox" onchange="toggleSub(${s.id},${taskId},this)">
+        <span class="sub-chk-box"></span>
+      </label>
+      <span class="sub-name" id="subname-${s.id}">${escHtml(s.sub_text)}</span>
+      <div class="sub-meta-row">
+        <span class="meta-item">📅 ${fmtDateShort(s.created_at)}</span>
+        <span class="meta-due" id="subdue-${s.id}" onclick="openDP(this,'sub',${s.id},'')">🎯 Bitiş</span>
+      </div>
+      <button class="sub-del" onclick="delSub(${s.id},${taskId})" title="Sil">🗑</button>
+    </div>`);
+  loadStats();
+}
+async function toggleSub(subId, taskId, chk) {
+  const res = await api(`/api/subtasks/${subId}/toggle`, 'POST');
+  const nameEl = document.getElementById(`subname-${subId}`);
+  if (nameEl) nameEl.classList.toggle('done', res.sub_done);
+  const taskChk  = document.querySelector(`#task-${taskId} .chk-wrap input`);
+  const taskName = document.getElementById(`taskname-${taskId}`);
+  const taskMeta = document.getElementById(`taskmeta-${taskId}`);
+  if (taskChk) taskChk.checked = res.task_completed;
+  if (taskName) taskName.classList.toggle('done', res.task_completed);
+  if (taskMeta && res.task_completed) taskMeta.textContent = '📅 ' + fmtDateTime(res.task_completed_at);
+  loadStats();
+}
+async function delSub(subId, taskId) {
+  await api(`/api/subtasks/${subId}`, 'DELETE');
+  document.getElementById(`sub-${subId}`)?.remove();
+  loadStats();
+}
+
+// ── DATE PICKER ─────────────────────────────────────────────
+const dpPopup = document.getElementById('dpPopup');
+const dpGrid  = document.getElementById('dpGrid');
+const dpTitle = document.getElementById('dpTitle');
+let dpYear, dpMonth, dpSelected, dpCtx;
+
+const AYLAR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
+               'Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+
+function openDP(anchor, type, id, current) {
+  dpCtx = { type, id, anchor };
+  const now = new Date();
+  if (current) {
+    const d = new Date(current.replace(' ','T'));
+    dpYear  = d.getFullYear();
+    dpMonth = d.getMonth();
+    dpSelected = `${dpYear}-${String(dpMonth+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    document.getElementById('dpHour').value = d.getHours();
+    document.getElementById('dpMin').value  = d.getMinutes();
+  } else {
+    dpYear  = now.getFullYear();
+    dpMonth = now.getMonth();
+    dpSelected = null;
+    // varsayılan: günün sonu
+    document.getElementById('dpHour').value = 23;
+    document.getElementById('dpMin').value  = 59;
+  }
+  renderDP();
+  // Konumlandır
+  const rect = anchor.getBoundingClientRect();
+  let x = rect.left;
+  let y = rect.bottom + 6;
+  if (x + 280 > window.innerWidth) x = window.innerWidth - 285;
+  if (y + 320 > window.innerHeight) y = rect.top - 326;
+  dpPopup.style.left = x + 'px';
+  dpPopup.style.top  = y + 'px';
+  dpPopup.classList.add('show');
+  event.stopPropagation();
+}
+
+function renderDP() {
+  dpTitle.textContent = `${AYLAR[dpMonth]} ${dpYear}`;
+  dpGrid.innerHTML = '';
+  const today    = new Date();
+  const firstDay = new Date(dpYear, dpMonth, 1);
+  let startDow = firstDay.getDay() - 1; if (startDow < 0) startDow = 6;
+  const daysInMonth = new Date(dpYear, dpMonth + 1, 0).getDate();
+  const prevDays    = new Date(dpYear, dpMonth, 0).getDate();
+
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = prevDays - i;
+    dpGrid.insertAdjacentHTML('beforeend', `<div class="dp-day other">${d}</div>`);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${dpYear}-${String(dpMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = d === today.getDate() && dpMonth === today.getMonth() && dpYear === today.getFullYear();
+    const isSel   = dateStr === dpSelected;
+    dpGrid.insertAdjacentHTML('beforeend',
+      `<div class="dp-day ${isToday?'today':''} ${isSel?'selected':''}" data-d="${dateStr}">${d}</div>`);
+  }
+  const total = startDow + daysInMonth;
+  const rem   = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= rem; d++) {
+    dpGrid.insertAdjacentHTML('beforeend', `<div class="dp-day other">${d}</div>`);
+  }
+  dpGrid.querySelectorAll('.dp-day:not(.other)').forEach(el => {
+    el.addEventListener('click', () => selectDPDate(el.dataset.d));
+  });
+}
+
+function selectDPDate(dateStr) {
+  dpSelected = dateStr;
+  // Sadece görsel olarak seç, kaydet butonuna basılana kadar bekle
+  dpGrid.querySelectorAll('.dp-day').forEach(el => el.classList.remove('selected'));
+  const target = dpGrid.querySelector(`.dp-day[data-d="${dateStr}"]`);
+  if (target) target.classList.add('selected');
+}
+
+async function saveDPDate(dateStr) {
+  if (!dpCtx) return;
+  let url, body, res;
+  if (dpCtx.type === 'task') {
+    url = `/api/tasks/${dpCtx.id}/due`;
+    res = await api(url, 'POST', {due_at: dateStr});
+  } else if (dpCtx.type === 'taskstart') {
+    if (!dateStr) {
+      // Başlangıç silinemez
+      dpPopup.classList.remove('show');
+      return;
+    }
+    url = `/api/tasks/${dpCtx.id}/created`;
+    res = await api(url, 'POST', {created_at: dateStr});
+  } else if (dpCtx.type === 'sub') {
+    url = `/api/subtasks/${dpCtx.id}/due`;
+    res = await api(url, 'POST', {due_at: dateStr});
+  } else if (dpCtx.type === 'plansub') {
+    url = `/api/plan-subtasks/${dpCtx.id}/due`;
+    res = await api(url, 'POST', {due_at: dateStr});
+  } else if (dpCtx.type === 'planstart' || dpCtx.type === 'plandue') {
+    // Plan başlangıç/bitiş: önce mevcut değerleri al, sonra birini güncelle
+    const planEl = document.getElementById(`plan-${dpCtx.id}`);
+    const startEl = document.getElementById(`planstart-${dpCtx.id}`);
+    const dueEl   = document.getElementById(`plandue-${dpCtx.id}`);
+    // Mevcut start_at ve due_at değerlerini çıkar (onclick'ten)
+    const curStart = extractDateFromBtn(startEl, 'planstart', dpCtx.id);
+    const curDue   = extractDateFromBtn(dueEl, 'plandue', dpCtx.id);
+    let newStart = curStart, newDue = curDue;
+    if (dpCtx.type === 'planstart') newStart = dateStr;
+    else                            newDue   = dateStr;
+    res = await api(`/api/plans/${dpCtx.id}/dates`, 'POST', {start_at: newStart, due_at: newDue});
+  }
+
+  // UI güncelle
+  if (dpCtx.type === 'planstart') {
+    const start = res.start_at;
+    if (start) {
+      const dt = new Date(start.replace(' ','T'));
+      const sh = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      dpCtx.anchor.classList.add('set');
+      dpCtx.anchor.textContent = `🟢 ${sh}`;
+      dpCtx.anchor.setAttribute('onclick', `openDP(this,'planstart',${dpCtx.id},'${start}')`);
+    } else {
+      dpCtx.anchor.classList.remove('set');
+      dpCtx.anchor.textContent = '🟢 Başlangıç';
+      dpCtx.anchor.setAttribute('onclick', `openDP(this,'planstart',${dpCtx.id},'')`);
+    }
+  } else if (dpCtx.type === 'plandue') {
+    const due = res.due_at;
+    if (due) {
+      const dt = new Date(due.replace(' ','T'));
+      const sh = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      dpCtx.anchor.classList.add('set');
+      dpCtx.anchor.classList.remove('overdue');
+      if (dt < new Date()) dpCtx.anchor.classList.add('overdue');
+      dpCtx.anchor.textContent = `🎯 ${sh}`;
+      dpCtx.anchor.setAttribute('onclick', `openDP(this,'plandue',${dpCtx.id},'${due}')`);
+    } else {
+      dpCtx.anchor.classList.remove('set', 'overdue');
+      dpCtx.anchor.textContent = '🎯 Bitiş';
+      dpCtx.anchor.setAttribute('onclick', `openDP(this,'plandue',${dpCtx.id},'')`);
+    }
+  } else if (dpCtx.type === 'taskstart') {
+    const start = res.created_at;
+    const dt = new Date(start.replace(' ','T'));
+    const sh = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    dpCtx.anchor.textContent = `📅 ${sh}`;
+    dpCtx.anchor.setAttribute('onclick', `openDP(this,'taskstart',${dpCtx.id},'${start}')`);
+  } else {
+    // task / sub / plansub
+    if (dateStr) {
+      const dt = new Date(res.due_at.replace(' ','T'));
+      const sh = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+      dpCtx.anchor.classList.add('set');
+      dpCtx.anchor.classList.remove('overdue');
+      if (dt < new Date()) dpCtx.anchor.classList.add('overdue');
+      dpCtx.anchor.textContent = `🎯 ${sh}`;
+    } else {
+      dpCtx.anchor.classList.remove('set', 'overdue');
+      dpCtx.anchor.textContent = (dpCtx.type === 'task') ? '🎯 Bitiş tarihi' : '🎯 Bitiş';
+    }
+  }
+  dpPopup.classList.remove('show');
+}
+
+function extractDateFromBtn(btn, type, id) {
+  // onclick attribute'undan parametreyi çek: openDP(this,'planstart',5,'2025-01-01 09:00:00')
+  const oc = btn.getAttribute('onclick') || '';
+  const match = oc.match(/'([^']*)'\)$/);
+  return (match && match[1]) ? match[1] : null;
+}
+
+function buildDateTimeStr() {
+  if (!dpSelected) return null;
+  const h = String(parseInt(document.getElementById('dpHour').value) || 0).padStart(2,'0');
+  const m = String(parseInt(document.getElementById('dpMin').value)  || 0).padStart(2,'0');
+  return `${dpSelected} ${h}:${m}:00`;
+}
+
+document.getElementById('dpPrev').addEventListener('click', () => {
+  dpMonth--; if (dpMonth < 0) { dpMonth = 11; dpYear--; } renderDP();
+});
+document.getElementById('dpNext').addEventListener('click', () => {
+  dpMonth++; if (dpMonth > 11) { dpMonth = 0; dpYear++; } renderDP();
+});
+document.getElementById('dpClear').addEventListener('click', () => saveDPDate(null));
+document.getElementById('dpToday').addEventListener('click', () => {
+  const now = new Date();
+  const ds = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  selectDPDate(ds);
+});
+document.getElementById('dpSave').addEventListener('click', () => {
+  const dt = buildDateTimeStr();
+  if (!dt) {
+    alert('Lütfen önce bir tarih seçin');
+    return;
+  }
+  saveDPDate(dt);
+});
+
+// Preset saat butonları
+document.querySelectorAll('.dp-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('dpHour').value = btn.dataset.h;
+    document.getElementById('dpMin').value  = btn.dataset.m;
+  });
+});
+
+// Saat input validasyonu
+document.getElementById('dpHour').addEventListener('input', e => {
+  let v = parseInt(e.target.value);
+  if (isNaN(v) || v < 0) e.target.value = 0;
+  else if (v > 23) e.target.value = 23;
+});
+document.getElementById('dpMin').addEventListener('input', e => {
+  let v = parseInt(e.target.value);
+  if (isNaN(v) || v < 0) e.target.value = 0;
+  else if (v > 59) e.target.value = 59;
+});
+document.addEventListener('click', e => {
+  if (!dpPopup.contains(e.target) && !e.target.classList.contains('meta-due')) {
+    dpPopup.classList.remove('show');
+  }
+});
+
+// ── TAKVİM ──────────────────────────────────────────────────
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let calData  = {};
+
+document.getElementById('calPrev').addEventListener('click', () => {
+  calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar();
+});
+document.getElementById('calNext').addEventListener('click', () => {
+  calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar();
+});
+
+let notesSummary = {};
+async function renderCalendar() {
+  document.getElementById('calTitle').textContent = `${AYLAR[calMonth]} ${calYear}`;
+  [calData, notesSummary] = await Promise.all([
+    api('/api/calendar'),
+    api('/api/notes-summary')
+  ]);
+  const cells = document.getElementById('calCells');
+  cells.innerHTML = '';
+
+  const today = new Date();
+  const firstDay = new Date(calYear, calMonth, 1);
+  let startDow = firstDay.getDay() - 1; if (startDow < 0) startDow = 6;
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const prevDays    = new Date(calYear, calMonth, 0).getDate();
+
+  for (let i = startDow - 1; i >= 0; i--) {
+    cells.insertAdjacentHTML('beforeend', `<div class="cal-cell other-month"><div class="cal-cell-num">${prevDays - i}</div></div>`);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const mm = String(calMonth + 1).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    const key = `${calYear}-${mm}-${dd}`;
+    const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+    const dow = new Date(calYear, calMonth, d).getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const gorevler = calData[key] || [];
+
+    // Mini görev etiketleri (en fazla 3)
+    let miniHTML = '';
+    const shown = gorevler.slice(0, 3);
+    shown.forEach(g => {
+      let cls = 'cal-mini';
+      if (g.completed) cls += ' done';
+      else if (g.tip === 'bitis') cls += ' bitis';
+      if (g.kind === 'plan') cls += ' plan';
+      const prefix = g.tip === 'bitis' ? 'Bitiş: ' : 'Başlangıç: ';
+      miniHTML += `<div class="${cls}" title="${escHtml(prefix + g.text)}">${escHtml(prefix)}${escHtml(g.text)}</div>`;
+    });
+    if (gorevler.length > 3) {
+      miniHTML += `<div class="cal-more">+${gorevler.length - 3} daha</div>`;
+    }
+
+    const noteCount = (notesSummary[key] || 0);
+    const noteBadge = noteCount > 0 ? `<span class="cal-note-badge">📝 ${noteCount}</span>` : '';
+    cells.insertAdjacentHTML('beforeend', `
+      <div class="cal-cell ${isToday?'today':''} ${isWeekend?'weekend':''}"
+           data-key="${key}" data-gorevler='${JSON.stringify(gorevler).replace(/'/g,"&#39;")}'>
+        <div class="cal-cell-num">${d}</div>
+        ${noteBadge}
+        <div class="cal-tasks">${miniHTML}</div>
+      </div>`);
+  }
+
+  const totalCells = startDow + daysInMonth;
+  const remaining  = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let d = 1; d <= remaining; d++) {
+    cells.insertAdjacentHTML('beforeend', `<div class="cal-cell other-month"><div class="cal-cell-num">${d}</div></div>`);
+  }
+
+  bindTooltips(cells);
+}
+
+// ── TOOLTIP YÖNETİMİ (sticky + sekmeli) ─────────────────────
+const tt = document.getElementById('calTooltip');
+const ttBody = document.getElementById('ttBody');
+const ttTitle = document.getElementById('ttTitle');
+const ttBadgeTasks = document.getElementById('ttBadgeTasks');
+const ttBadgeNotes = document.getElementById('ttBadgeNotes');
+let ttHideTimer = null;
+let ttCurrentKey = null;
+let ttCurrentTab = 'tasks';
+let ttGorevler = [];
+let ttNotlar = [];
+
+function bindTooltips(cells) {
+  cells.querySelectorAll('.cal-cell:not(.other-month)').forEach(cell => {
+    cell.addEventListener('mouseenter', e => {
+      clearTimeout(ttHideTimer);
+      openTooltip(cell);
+    });
+    cell.addEventListener('mouseleave', e => {
+      // Eğer tooltip'e geçtiyse kapama
+      ttHideTimer = setTimeout(() => closeTooltip(), 250);
+    });
+  });
+}
+
+tt.addEventListener('mouseenter', () => { clearTimeout(ttHideTimer); });
+tt.addEventListener('mouseleave', () => {
+  ttHideTimer = setTimeout(() => closeTooltip(), 250);
+});
+
+document.getElementById('ttClose').addEventListener('click', closeTooltip);
+
+document.querySelectorAll('.cal-tooltip-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cal-tooltip-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ttCurrentTab = btn.dataset.ttTab;
+    renderTooltipBody();
+  });
+});
+
+async function openTooltip(cell) {
+  const gorevler = JSON.parse(cell.dataset.gorevler || '[]');
+  const key = cell.dataset.key;
+  const [y, m, d2] = key.split('-');
+  ttCurrentKey = key;
+  ttGorevler = gorevler;
+  ttTitle.textContent = `📅 ${d2}.${m}.${y}`;
+  ttBadgeTasks.textContent = gorevler.length;
+
+  // Notları yükle
+  try {
+    ttNotlar = await api(`/api/notes/${key}`);
+  } catch (e) {
+    ttNotlar = [];
+  }
+  ttBadgeNotes.textContent = ttNotlar.length;
+
+  renderTooltipBody();
+
+  // Konumlandır
+  const rect = cell.getBoundingClientRect();
+  let tx = rect.right + 8, ty = rect.top;
+  if (tx + 320 > window.innerWidth) tx = rect.left - 328;
+  if (ty + 320 > window.innerHeight) ty = window.innerHeight - 330;
+  if (ty < 10) ty = 10;
+  tt.style.left = tx + 'px';
+  tt.style.top  = ty + 'px';
+  tt.classList.add('show');
+}
+
+function closeTooltip() {
+  tt.classList.remove('show');
+  ttCurrentKey = null;
+}
+
+function renderTooltipBody() {
+  if (ttCurrentTab === 'tasks') {
+    if (ttGorevler.length === 0) {
+      ttBody.innerHTML = '<div class="cal-tooltip-empty">Bu tarihte görev yok</div>';
+    } else {
+      ttBody.innerHTML = ttGorevler.map(g => {
+        const tag = g.tip === 'bitis'
+          ? '<span class="cal-tooltip-tag bit">Bitiş</span>'
+          : '<span class="cal-tooltip-tag bas">Başlangıç</span>';
+        const kindIcon = g.kind === 'plan' ? '📂' : (g.completed ? '✅' : '🔲');
+        return `<div class="cal-tooltip-item">${kindIcon} ${tag} <span style="flex:1">${escHtml(g.text)}</span> <span style="color:var(--text3)">🕐${g.saat}</span></div>`;
+      }).join('');
+    }
+  } else {
+    // Notlar
+    let html = '';
+    if (ttNotlar.length === 0) {
+      html += '<div class="cal-tooltip-empty">Henüz not yok</div>';
+    } else {
+      html += ttNotlar.map(n => `
+        <div class="note-item">
+          <div class="note-item-text">
+            ${escHtml(n.note_text)}
+            <div class="note-item-time">🕐 ${fmtDateTime(n.created_at)}</div>
+          </div>
+          <button class="note-del-btn" onclick="delNote(${n.id})" title="Notu sil">🗑</button>
+        </div>
+      `).join('');
+    }
+    html += `
+      <div class="note-add-row">
+        <textarea id="ttNoteInput" placeholder="Yeni not..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveNote()}"></textarea>
+        <button class="note-add-btn" onclick="saveNote()">＋</button>
+      </div>`;
+    ttBody.innerHTML = html;
+    setTimeout(() => document.getElementById('ttNoteInput')?.focus(), 50);
+  }
+}
+
+async function saveNote() {
+  const inp = document.getElementById('ttNoteInput');
+  const text = inp.value.trim();
+  if (!text || !ttCurrentKey) return;
+  const n = await api('/api/notes', 'POST', {note_text: text, note_date: ttCurrentKey});
+  ttNotlar.push(n);
+  ttBadgeNotes.textContent = ttNotlar.length;
+  // Hücre üzerindeki badge'i güncellemek için takvimi yeniden çiz
+  notesSummary[ttCurrentKey] = (notesSummary[ttCurrentKey] || 0) + 1;
+  updateCellBadge(ttCurrentKey);
+  renderTooltipBody();
+}
+
+async function delNote(noteId) {
+  await api(`/api/notes/${noteId}`, 'DELETE');
+  ttNotlar = ttNotlar.filter(n => n.id !== noteId);
+  ttBadgeNotes.textContent = ttNotlar.length;
+  if (ttCurrentKey) {
+    notesSummary[ttCurrentKey] = Math.max(0, (notesSummary[ttCurrentKey] || 0) - 1);
+    updateCellBadge(ttCurrentKey);
+  }
+  renderTooltipBody();
+}
+
+function updateCellBadge(key) {
+  const cell = document.querySelector(`.cal-cell[data-key="${key}"]`);
+  if (!cell) return;
+  const existing = cell.querySelector('.cal-note-badge');
+  const cnt = notesSummary[key] || 0;
+  if (cnt > 0) {
+    if (existing) {
+      existing.textContent = `📝 ${cnt}`;
+    } else {
+      cell.insertAdjacentHTML('afterbegin', `<span class="cal-note-badge">📝 ${cnt}</span>`);
+    }
+  } else if (existing) {
+    existing.remove();
+  }
+}
+
+// ── GÜNLÜK GÖREVLER ─────────────────────────────────────────
+document.getElementById('addTodayBtn').addEventListener('click', addTodayTask);
+document.getElementById('newTodayInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTodayTask();
+});
+
+async function addTodayTask() {
+  const inp = document.getElementById('newTodayInput');
+  const text = inp.value.trim();
+  if (!text) return;
+  await api('/api/today-task', 'POST', {task_text: text});
+  inp.value = '';
+  loadToday();
+  loadAll();  // tüm görevler de güncellensin
+}
+
+async function loadToday() {
+  // Tarih başlığı
+  const now = new Date();
+  const ay = AYLAR[now.getMonth()];
+  document.getElementById('todayDate').textContent = `(${now.getDate()} ${ay} ${now.getFullYear()})`;
+
+  const data = await api('/api/today-tasks');
+  const list = document.getElementById('todayList');
+  const odList = document.getElementById('overdueList');
+
+  if (!data.today.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">☀️</div><p>Bugün için henüz görev yok.</p></div>';
+  } else {
+    list.innerHTML = data.today.map(t => taskCardHTML(t, false, true)).join('');
+  }
+
+  if (!data.overdue.length) {
+    odList.innerHTML = '<div class="empty" style="padding:20px"><p style="font-size:12px">🎉 Geciken görev yok!</p></div>';
+  } else {
+    odList.innerHTML = data.overdue.map(t => taskCardHTML(t, false, false)).join('');
+  }
+
+  // İstatistik
+  const s = data.stats;
+  document.getElementById('todayStatTotal').textContent  = s.toplam;
+  document.getElementById('todayStatDone').textContent   = s.tamamlanan;
+  document.getElementById('todayStatActive').textContent = s.aktif;
+  const pct = s.toplam > 0 ? Math.round(s.tamamlanan / s.toplam * 100) : 0;
+  document.getElementById('todayChartPct').textContent = pct + '%';
+  const circ = 2 * Math.PI * 15.9;
+  const fill = (pct / 100) * circ;
+  document.getElementById('todayChartCircle').setAttribute('stroke-dasharray', `${fill.toFixed(1)} ${(circ-fill).toFixed(1)}`);
+}
+
+// ── PLANLAMALAR ─────────────────────────────────────────────
+let currentCatId = null;
+let planCategories = [];
+
+document.getElementById('showAddCatBtn').addEventListener('click', () => {
+  const row = document.getElementById('addCatRow');
+  const inp = document.getElementById('newCatInput');
+  row.style.display = 'flex';
+  setTimeout(() => inp.focus(), 50);
+});
+document.getElementById('cancelAddCatBtn').addEventListener('click', () => {
+  document.getElementById('addCatRow').style.display = 'none';
+  document.getElementById('newCatInput').value = '';
+});
+document.getElementById('addCatBtn').addEventListener('click', addCategory);
+document.getElementById('newCatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addCategory();
+  if (e.key === 'Escape') {
+    document.getElementById('addCatRow').style.display = 'none';
+    document.getElementById('newCatInput').value = '';
+  }
+});
+
+async function loadPlans() {
+  planCategories = await api('/api/plan-categories');
+  renderCategoryList();
+  if (currentCatId && planCategories.find(c => c.id === currentCatId)) {
+    renderPlansForCategory(currentCatId);
+  } else if (planCategories.length > 0) {
+    currentCatId = planCategories[0].id;
+    renderCategoryList();
+    renderPlansForCategory(currentCatId);
+  } else {
+    currentCatId = null;
+    document.getElementById('plansContent').innerHTML =
+      '<div class="plans-empty-state"><div class="empty-icon" style="font-size:48px;margin-bottom:8px">📂</div><p>Henüz kategori yok. Yukarıdan bir kategori oluştur (örn: Film Listesi, Kitap Listesi).</p></div>';
+  }
+}
+
+function renderCategoryList() {
+  const list = document.getElementById('plansCatList');
+  if (!planCategories.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:11px;padding:20px;">Kategori yok</div>';
+    return;
+  }
+  list.innerHTML = planCategories.map(c => `
+    <div class="plans-cat-item ${c.id === currentCatId ? 'active' : ''}" data-cat-id="${c.id}">
+      <span class="plans-cat-name">📁 ${escHtml(c.name)}</span>
+      <span class="plans-cat-count">${c.count}</span>
+      <div class="plans-cat-actions">
+        <button class="plans-cat-btn" title="Yeniden adlandır" onclick="event.stopPropagation();renameCategory(${c.id},'${escHtml(c.name).replace(/'/g,"\\'")}')">✏️</button>
+        <button class="plans-cat-btn" title="Sil" onclick="event.stopPropagation();delCategory(${c.id})">🗑</button>
+      </div>
+    </div>
+  `).join('');
+  bindCategoryClicks();
+}
+
+async function addCategory() {
+  const inp = document.getElementById('newCatInput');
+  const name = inp.value.trim();
+  if (!name) return;
+  const c = await api('/api/plan-categories', 'POST', {name});
+  inp.value = '';
+  document.getElementById('addCatRow').style.display = 'none';
+  planCategories.push(c);
+  currentCatId = c.id;
+  renderCategoryList();
+  renderPlansForCategory(c.id);
+}
+
+function renameCategory(cid, oldName) {
+  const item = document.querySelector(`.plans-cat-item[data-cat-id="${cid}"]`);
+  if (!item) return;
+  const originalHTML = item.innerHTML;
+  item.innerHTML = `
+    <input type="text" class="plans-cat-rename-input" value="${escHtml(oldName)}" />
+    <button class="plans-cat-save" title="Kaydet">✓</button>
+    <button class="plans-cat-cancel" title="İptal">✕</button>
+  `;
+  const input = item.querySelector('input');
+  const saveBtn = item.querySelector('.plans-cat-save');
+  const cancelBtn = item.querySelector('.plans-cat-cancel');
+  input.focus(); input.select();
+  const cancel = () => { item.innerHTML = originalHTML; bindCategoryClicks(); };
+  const save = async () => {
+    const newName = input.value.trim();
+    if (!newName || newName === oldName) { cancel(); return; }
+    await api(`/api/plan-categories/${cid}`, 'PUT', {name: newName});
+    const cat = planCategories.find(c => c.id === cid);
+    if (cat) cat.name = newName;
+    renderCategoryList();
+    if (currentCatId === cid) renderPlansForCategory(cid);
+  };
+  saveBtn.addEventListener('click', e => { e.stopPropagation(); save(); });
+  cancelBtn.addEventListener('click', e => { e.stopPropagation(); cancel(); });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') cancel();
+  });
+  input.addEventListener('click', e => e.stopPropagation());
+}
+
+function bindCategoryClicks() {
+  document.querySelectorAll('.plans-cat-item').forEach(el => {
+    el.onclick = () => {
+      currentCatId = parseInt(el.dataset.catId);
+      renderCategoryList();
+      renderPlansForCategory(currentCatId);
+    };
+  });
+}
+
+function delCategory(cid) {
+  const item = document.querySelector(`.plans-cat-item[data-cat-id="${cid}"]`);
+  if (!item) return;
+  const originalHTML = item.innerHTML;
+  item.innerHTML = `
+    <span style="flex:1;font-size:11px;color:var(--red);font-weight:600;">Silinsin mi?</span>
+    <button class="plans-cat-save" style="background:var(--red);" title="Evet">✓</button>
+    <button class="plans-cat-cancel" title="İptal">✕</button>
+  `;
+  const saveBtn = item.querySelector('.plans-cat-save');
+  const cancelBtn = item.querySelector('.plans-cat-cancel');
+  const cancel = () => { item.innerHTML = originalHTML; bindCategoryClicks(); };
+  const confirmDel = async () => {
+    await api(`/api/plan-categories/${cid}`, 'DELETE');
+    if (currentCatId === cid) currentCatId = null;
+    loadPlans();
+  };
+  saveBtn.addEventListener('click', e => { e.stopPropagation(); confirmDel(); });
+  cancelBtn.addEventListener('click', e => { e.stopPropagation(); cancel(); });
+}
+
+async function renderPlansForCategory(cid) {
+  const plans = await api(`/api/plans/${cid}`);
+  const cat = planCategories.find(c => c.id === cid);
+  const catName = cat ? cat.name : '';
+
+  let html = `
+    <div class="section-hdr" style="margin-bottom:14px;">
+      <h2 style="font-size:18px;">📁 ${escHtml(catName)}</h2>
+      <div class="task-input-wrap">
+        <input type="text" id="newPlanInput" placeholder="Yeni plan ekle..." />
+        <button class="add-btn" id="addPlanBtn">＋ Plan</button>
+      </div>
+    </div>
+    <div id="plansList">${plans.length ? plans.map(p => planCardHTML(p)).join('') :
+      '<div class="empty"><div class="empty-icon">📝</div><p>Bu kategoride henüz plan yok.</p></div>'}</div>`;
+
+  document.getElementById('plansContent').innerHTML = html;
+  document.getElementById('addPlanBtn').addEventListener('click', addPlan);
+  document.getElementById('newPlanInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPlan();
+  });
+}
+
+async function addPlan() {
+  if (!currentCatId) return;
+  const inp = document.getElementById('newPlanInput');
+  const text = inp.value.trim();
+  if (!text) return;
+  const p = await api('/api/plans', 'POST', {category_id: currentCatId, plan_text: text});
+  inp.value = '';
+  const list = document.getElementById('plansList');
+  if (list.querySelector('.empty')) list.innerHTML = '';
+  list.insertAdjacentHTML('afterbegin', planCardHTML(p));
+  // Sidebar sayısını güncelle
+  const c = planCategories.find(c => c.id === currentCatId);
+  if (c) { c.count++; renderCategoryList(); }
+}
+
+function planCardHTML(p) {
+  const startSet = p.start_at;
+  const dueSet   = p.due_at;
+  const startLbl = startSet ? `🟢 ${fmtDateTime(p.start_at)}` : '🟢 Başlangıç';
+  const dueLbl   = dueSet   ? `🎯 ${fmtDateTime(p.due_at)}`   : '🎯 Bitiş';
+  const startCls = startSet ? 'meta-due set' : 'meta-due';
+  const dueCls   = dueSet   ? (isOverdue(p.due_at, p.completed) ? 'meta-due set overdue' : 'meta-due set') : 'meta-due';
+
+  const subsHTML = p.subtasks.map(s => {
+    const subDueCls = s.due_at ? (isOverdue(s.due_at, s.sub_done) ? 'meta-due set overdue' : 'meta-due set') : 'meta-due';
+    const subDueLbl = s.due_at ? `🎯 ${fmtDateShort(s.due_at)}` : '🎯 Bitiş';
+    return `
+      <div class="sub-item" id="psub-${s.id}">
+        <label class="sub-chk-wrap">
+          <input type="checkbox" ${s.sub_done ? 'checked' : ''} onchange="togglePlanSub(${s.id},${p.id},this)">
+          <span class="sub-chk-box"></span>
+        </label>
+        <span class="sub-name ${s.sub_done ? 'done' : ''}" id="psubname-${s.id}">${escHtml(s.sub_text)}</span>
+        <div class="sub-meta-row">
+          <span class="meta-item">📅 ${fmtDateShort(s.created_at)}</span>
+          <span class="${subDueCls}" onclick="openDP(this,'plansub',${s.id},'${s.due_at||''}')">${subDueLbl}</span>
+        </div>
+        <button class="sub-del" onclick="delPlanSub(${s.id},${p.id})" title="Sil">🗑</button>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="plan-card" id="plan-${p.id}">
+      <div class="task-row">
+        <label class="chk-wrap">
+          <input type="checkbox" ${p.completed?'checked':''} onchange="togglePlan(${p.id},this)">
+          <span class="chk-box"></span>
+        </label>
+        <span class="task-name ${p.completed?'done':''}" id="planname-${p.id}">${escHtml(p.plan_text)}</span>
+        <div class="task-meta">
+          <span class="${startCls}" id="planstart-${p.id}" onclick="openDP(this,'planstart',${p.id},'${p.start_at||''}')">${startLbl}</span>
+          <span class="${dueCls}" id="plandue-${p.id}" onclick="openDP(this,'plandue',${p.id},'${p.due_at||''}')">${dueLbl}</span>
+        </div>
+        <button class="icon-btn del-btn" onclick="delPlan(${p.id})" title="Sil">🗑</button>
+      </div>
+    </div>`;
+}
+
+async function togglePlan(pid, chk) {
+  const res = await api(`/api/plans/${pid}/toggle`, 'POST');
+  const nameEl = document.getElementById(`planname-${pid}`);
+  if (res.completed) nameEl.classList.add('done');
+  else nameEl.classList.remove('done');
+}
+
+async function delPlan(pid) {
+  await api(`/api/plans/${pid}`, 'DELETE');
+  document.getElementById(`plan-${pid}`)?.remove();
+  const c = planCategories.find(c => c.id === currentCatId);
+  if (c) { c.count--; renderCategoryList(); }
+}
+
+function togglePlanExpand(btn, pid) {
+  const panel = document.getElementById(`psubpanel-${pid}`);
+  const open = panel.classList.toggle('open');
+  btn.textContent = open ? '▾' : '▸';
+}
+
+async function addPlanSub(pid) {
+  const inp = document.getElementById(`psubinput-${pid}`);
+  const text = inp.value.trim();
+  if (!text) return;
+  const s = await api(`/api/plans/${pid}/subtasks`, 'POST', {sub_text: text});
+  inp.value = '';
+  const list = document.getElementById(`psublist-${pid}`);
+  list.insertAdjacentHTML('beforeend', `
+    <div class="sub-item" id="psub-${s.id}">
+      <label class="sub-chk-wrap">
+        <input type="checkbox" onchange="togglePlanSub(${s.id},${pid},this)">
+        <span class="sub-chk-box"></span>
+      </label>
+      <span class="sub-name" id="psubname-${s.id}">${escHtml(s.sub_text)}</span>
+      <div class="sub-meta-row">
+        <span class="meta-item">📅 ${fmtDateShort(s.created_at)}</span>
+        <span class="meta-due" onclick="openDP(this,'plansub',${s.id},'')">🎯 Bitiş</span>
+      </div>
+      <button class="sub-del" onclick="delPlanSub(${s.id},${pid})" title="Sil">🗑</button>
+    </div>`);
+}
+
+async function togglePlanSub(sid, pid, chk) {
+  const res = await api(`/api/plan-subtasks/${sid}/toggle`, 'POST');
+  const nameEl = document.getElementById(`psubname-${sid}`);
+  if (nameEl) nameEl.classList.toggle('done', res.sub_done);
+  const planChk = document.querySelector(`#plan-${pid} .chk-wrap input`);
+  const planName = document.getElementById(`planname-${pid}`);
+  if (planChk) planChk.checked = res.plan_completed;
+  if (planName) planName.classList.toggle('done', res.plan_completed);
+}
+
+async function delPlanSub(sid, pid) {
+  await api(`/api/plan-subtasks/${sid}`, 'DELETE');
+  document.getElementById(`psub-${sid}`)?.remove();
+}
+
+// Başlat
+loadAll();
+renderCalendar();
+</script>
+</body>
+</html>

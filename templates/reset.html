@@ -1,0 +1,43 @@
+{% extends "_auth_base.html" %}
+{% block content %}
+  <div class="auth-logo">
+    <div class="icon">🔐</div>
+    <h1>Yeni Şifre</h1>
+    <p>Lütfen yeni şifrenizi belirleyin</p>
+  </div>
+
+  {% if invalid %}
+    <div class="alert error">
+      {% if expired %}
+        ⏰ Bu sıfırlama linki süresini doldurmuş. Yeni bir tane oluşturun.
+      {% else %}
+        ❌ Geçersiz veya kullanılmış sıfırlama linki.
+      {% endif %}
+    </div>
+    <div class="auth-footer">
+      <a href="{{ url_for('forgot') }}">Yeni link oluştur</a>
+    </div>
+  {% else %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="field">
+        <label for="password">Yeni şifre (en az 6 karakter)</label>
+        <input type="password" id="password" name="password" required minlength="6" autofocus>
+      </div>
+      <div class="field">
+        <label for="password2">Yeni şifre (tekrar)</label>
+        <input type="password" id="password2" name="password2" required minlength="6">
+      </div>
+      <button type="submit" class="btn-primary">Şifreyi Değiştir</button>
+    </form>
+
+    <div class="auth-footer">
+      <a href="{{ url_for('login') }}">← Giriş sayfasına dön</a>
+    </div>
+  {% endif %}
+{% endblock %}

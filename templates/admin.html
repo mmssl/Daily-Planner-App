@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Paneli - Görev Takip</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #007fff;
+    --accent-dark: #0060cc;
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #1a2332;
+    --text2: #64748b;
+    --text3: #94a3b8;
+    --red: #e74c3c;
+    --green: #27ae60;
+    --orange: #f39c12;
+    --purple: #8b5cf6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1a2332, #2d3a52);
+    padding: 0 28px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 20px rgba(0,0,0,.15);
+  }
+  header h1 { color: #fff; font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  header .admin-badge {
+    background: var(--red); color: #fff;
+    font-size: 10px; padding: 2px 8px;
+    border-radius: 6px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  header a {
+    color: rgba(255,255,255,.85);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    background: rgba(255,255,255,.12);
+    transition: background .2s;
+  }
+  header a:hover { background: rgba(255,255,255,.22); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  .alert {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .alert.success { background: rgba(39,174,96,.1); color: var(--green); border: 1px solid rgba(39,174,96,.25); }
+  .alert.error   { background: rgba(231,76,60,.1); color: var(--red); border: 1px solid rgba(231,76,60,.25); }
+
+  .section-title { font-size: 16px; font-weight: 700; margin: 28px 0 14px; display: flex; align-items: center; gap: 8px; }
+
+  /* İstatistik kartları */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .stat-card .stat-num { font-size: 30px; font-weight: 700; color: var(--text); }
+  .stat-card .stat-lbl { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .stat-card .stat-icon { font-size: 20px; margin-bottom: 6px; }
+
+  /* Tablo */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  td {
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,127,255,.03); }
+  .email-cell { font-weight: 600; }
+  .badge-verified {
+    display: inline-block;
+    background: rgba(39,174,96,.12);
+    color: var(--green);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+  }
+  .badge-unverified {
+    display: inline-block;
+    background: rgba(243,156,18,.12);
+    color: var(--orange);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+  }
+  .badge-admin {
+    display: inline-block;
+    background: rgba(231,76,60,.12);
+    color: var(--red);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+  }
+  .mono { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); }
+  .del-user-btn {
+    background: rgba(231,76,60,.1);
+    color: var(--red);
+    border: 1px solid rgba(231,76,60,.25);
+    border-radius: 7px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all .15s;
+  }
+  .del-user-btn:hover { background: var(--red); color: #fff; }
+  .del-user-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* Aksiyon kartları */
+  .action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .action-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .action-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .action-card p { font-size: 12px; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
+  .action-card input, .action-card textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    margin-bottom: 10px;
+  }
+  .action-card input:focus, .action-card textarea:focus { border-color: var(--accent); }
+  .action-card textarea { min-height: 90px; resize: vertical; }
+  .action-card label.check-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text2); margin-bottom: 12px; cursor: pointer;
+  }
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: background .2s;
+  }
+  .btn:hover { background: var(--accent-dark); }
+  .btn.btn-orange { background: var(--orange); }
+  .btn.btn-orange:hover { background: #d6890d; }
+
+  @media (max-width: 700px) {
+    .action-grid { grid-template-columns: 1fr; }
+    table { font-size: 12px; }
+    th, td { padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ Admin Paneli <span class="admin-badge">Yönetici</span></h1>
+  <a href="{{ url_for('index') }}">← Uygulamaya Dön</a>
+</header>
+
+<div class="container">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- İSTATİSTİKLER -->
+  <div class="section-title">📊 Genel İstatistikler</div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-num">{{ stats.users }}</div>
+      <div class="stat-lbl">Toplam Kullanıcı</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-num">{{ stats.verified }}</div>
+      <div class="stat-lbl">Doğrulanmış</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📝</div>
+      <div class="stat-num">{{ stats.tasks }}</div>
+      <div class="stat-lbl">Toplam Görev</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-num">{{ stats.done }}</div>
+      <div class="stat-lbl">Tamamlanan Görev</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📂</div>
+      <div class="stat-num">{{ stats.plans }}</div>
+      <div class="stat-lbl">Toplam Plan</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🗒️</div>
+      <div class="stat-num">{{ stats.notes }}</div>
+      <div class="stat-lbl">Toplam Not</div>
+    </div>
+  </div>
+
+  <!-- AKSİYONLAR -->
+  <div class="section-title">⚡ Hızlı İşlemler</div>
+  <div class="action-grid">
+    <div class="action-card">
+      <h3>⏰ Hatırlatmaları Tetikle</h3>
+      <p>Yaklaşan görevler için e-posta hatırlatma kontrolünü hemen çalıştırır.</p>
+      <a href="{{ url_for('manual_check_reminders') }}"><button class="btn">Şimdi Kontrol Et</button></a>
+    </div>
+
+    <div class="action-card">
+      <h3>📢 Toplu Duyuru Gönder</h3>
+      <p>Tüm kullanıcılara e-posta ile duyuru gönderir.</p>
+      <form method="POST" action="{{ url_for('admin_broadcast') }}">
+        <input type="text" name="subject" placeholder="Konu" required>
+        <textarea name="message" placeholder="Mesajınız..." required></textarea>
+        <label class="check-row">
+          <input type="checkbox" name="only_verified" checked style="width:auto;margin:0;">
+          Sadece doğrulanmış kullanıcılara gönder
+        </label>
+        <button type="submit" class="btn btn-orange">Duyuruyu Gönder</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- KULLANICILAR -->
+  <div class="section-title">👥 Kullanıcılar ({{ users|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>E-posta</th>
+          <th>Durum</th>
+          <th>Görev</th>
+          <th>Tamamlanan</th>
+          <th>Plan</th>
+          <th>Kayıt Tarihi</th>
+          <th>İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="email-cell">
+            {{ u.email }}
+            {% if u.email|lower in admin_emails %}
+              <span class="badge-admin">Admin</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.verified %}
+              <span class="badge-verified">Doğrulanmış</span>
+            {% else %}
+              <span class="badge-unverified">Beklemede</span>
+            {% endif %}
+          </td>
+          <td>{{ u.task_count }}</td>
+          <td>{{ u.done_count }}</td>
+          <td>{{ u.plan_count }}</td>
+          <td class="mono">{{ u.created_at[:16] }}</td>
+          <td>
+            {% if u.email|lower in admin_emails %}
+              <button class="del-user-btn" disabled title="Admin silinemez">🔒 Korumalı</button>
+            {% else %}
+              <form method="POST" action="{{ url_for('admin_delete_user', uid=u.id) }}"
+                    onsubmit="return confirm('{{ u.email }} ve TÜM verileri kalıcı olarak silinecek. Emin misiniz?');"
+                    style="display:inline;">
+                <button type="submit" class="del-user-btn">🗑 Sil</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

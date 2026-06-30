@@ -1,0 +1,47 @@
+{% extends "_auth_base.html" %}
+{% block content %}
+  <div class="auth-logo">
+    <div class="icon">📧</div>
+    <h1>E-posta Doğrulama</h1>
+    <p><strong>{{ email }}</strong> adresine gönderilen<br>6 haneli kodu girin</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if not expired %}
+  <form method="POST">
+    <div class="field">
+      <label for="code">Doğrulama Kodu</label>
+      <input type="text" id="code" name="code" required autofocus
+             maxlength="6" pattern="[0-9]{6}" inputmode="numeric"
+             placeholder="000000"
+             style="text-align:center;font-size:24px;letter-spacing:10px;font-family:monospace;font-weight:700;">
+    </div>
+    <button type="submit" class="btn-primary">Doğrula</button>
+  </form>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('verify_resend') }}" style="margin-top:16px;">
+    <button type="submit" class="btn-primary" style="background:var(--text2);">
+      {% if expired %}Yeni Kod Gönder{% else %}Kodu Tekrar Gönder{% endif %}
+    </button>
+  </form>
+
+  <div class="auth-footer">
+    <a href="{{ url_for('login') }}">← Giriş sayfasına dön</a>
+  </div>
+
+  <script>
+    // Sadece rakam girişi
+    const codeInput = document.getElementById('code');
+    if (codeInput) {
+      codeInput.addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+      });
+    }
+  </script>
+{% endblock %}

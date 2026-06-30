@@ -1,0 +1,34 @@
+{% extends "_auth_base.html" %}
+{% block content %}
+  <div class="auth-logo">
+    <div class="icon">📋</div>
+    <h1>Hesap Oluştur</h1>
+    <p>Görev Takip'e hoş geldin</p>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST">
+    <div class="field">
+      <label for="email">E-posta</label>
+      <input type="email" id="email" name="email" required autofocus>
+    </div>
+    <div class="field">
+      <label for="password">Şifre (en az 6 karakter)</label>
+      <input type="password" id="password" name="password" required minlength="6">
+    </div>
+    <div class="field">
+      <label for="password2">Şifre (tekrar)</label>
+      <input type="password" id="password2" name="password2" required minlength="6">
+    </div>
+    <button type="submit" class="btn-primary">Kayıt Ol</button>
+  </form>
+
+  <div class="auth-footer">
+    Zaten hesabın var mı? <a href="{{ url_for('login') }}">Giriş yap</a>
+  </div>
+{% endblock %}

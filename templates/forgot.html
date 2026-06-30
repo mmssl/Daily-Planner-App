@@ -1,0 +1,45 @@
+{% extends "_auth_base.html" %}
+{% block content %}
+  <div class="auth-logo">
+    <div class="icon">🔑</div>
+    <h1>Şifremi Unuttum</h1>
+    <p>E-posta adresini gir, sıfırlama linki oluşturulsun</p>
+  </div>
+
+  {% if sent %}
+    {% if not fake %}
+      <div class="alert info">
+        ✅ Sıfırlama linki oluşturuldu. Aşağıdaki linke 1 saat içinde tıklayarak şifreni değiştirebilirsin.
+      </div>
+      <div class="reset-link-box">
+        <div class="label">🔗 Sıfırlama Linki:</div>
+        <span id="resetLink">{{ reset_url }}</span>
+      </div>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('resetLink').textContent); this.textContent='Kopyalandı ✓'">
+        Linki Kopyala
+      </button>
+    {% else %}
+      <div class="alert info">
+        Eğer bu e-posta sistemde kayıtlıysa, sıfırlama linki oluşturuldu.
+      </div>
+    {% endif %}
+  {% else %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="field">
+        <label for="email">E-posta</label>
+        <input type="email" id="email" name="email" required autofocus>
+      </div>
+      <button type="submit" class="btn-primary">Sıfırlama Linki Oluştur</button>
+    </form>
+  {% endif %}
+
+  <div class="auth-footer">
+    <a href="{{ url_for('login') }}">← Giriş sayfasına dön</a>
+  </div>
+{% endblock %}
